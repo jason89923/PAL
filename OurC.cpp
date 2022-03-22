@@ -23,33 +23,259 @@ enum TokenType {
     BOOLEAN = 3
 };
 
-typedef vector<string> VS_vector;
+enum RuleOperation {
+    SEQUENTIAL = 0,
+    OPTIONAL = 1
+};
+
+enum RuleNature {
+    NORMAL = 0,
+    REPEATABLE = 1,
+    OMITTED = 2
+};
 
 class Rule {
+   private:
+    vector<Rule*> mRule;
+    string basicRule;
+    RuleOperation mOperation;
+    RuleNature mRuleNature;
+
    public:
-    Rule(vector<VS_vector> rule) {
+    Rule(string rule) {
+        basicRule = rule;
+        mOperation = SEQUENTIAL;
+        mRuleNature = NORMAL;
+    }
+
+    Rule() {
+        mOperation = SEQUENTIAL;
+        mRuleNature = NORMAL;
+    }
+
+    void AddRule(Rule* rule) {
+        mRule.push_back(rule);
+    }
+
+    void SetNature(RuleOperation operation, RuleNature ruleNature) {
+        mOperation = operation;
+        mRuleNature = ruleNature;
     }
 };
 
 class GrammerChecker {
    private:
-    map<string, Rule*> mRuleMap;
-
-    void BuildRule1(vector<VS_vector>& rule1) {
-        vector<string> subRule;
-        subRule.push_back("=");
-        subRule.push_back("<>");
-        subRule.push_back(">");
-        subRule.push_back("<");
-        subRule.push_back(">=");
-        subRule.push_back("<=");
-        rule1.push_back(subRule);
+    Rule* BuildRule1() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("[IDENT]"));
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule(":="));
+        subRule->AddRule(new Rule("<ArithExp>"));
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(subRule);
+        subRule2->AddRule(new Rule("<IDlessArithExpOrBexp>"));
+        subRule2->SetNature(OPTIONAL, NORMAL);
+        rule->AddRule(subRule2);
+        rule->AddRule(new Rule(";"));
+        subRule2 = new Rule();
+        subRule2->AddRule(new Rule("<NOT_IDStartArithExpOrBexp>"));
+        subRule2->AddRule(new Rule(";"));
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        parentRule->AddRule(subRule2);
+        parentRule->SetNature(OPTIONAL, NORMAL);
+        return parentRule;
     }
 
+    Rule* BuildRule2() {
+        Rule* rule = new Rule();
+        //rule->AddRule(new Rule("[IDENT]"));
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("+"));
+        subRule->AddRule(new Rule("<Term>"));
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(new Rule("-"));
+        subRule2->AddRule(new Rule("<Term>"));
+        Rule* subRule3 = new Rule();
+        subRule3->AddRule(new Rule("*"));
+        subRule3->AddRule(new Rule("<Factor>"));
+        Rule* subRule4 = new Rule();
+        subRule4->AddRule(new Rule("/"));
+        subRule4->AddRule(new Rule("<Factor>"));
+        rule->SetNature(OPTIONAL, REPEATABLE);
+        rule->AddRule(subRule);
+        rule->AddRule(subRule2);
+        rule->AddRule(subRule3);
+        rule->AddRule(subRule4);
+
+        subRule4 = new Rule();
+        subRule4->AddRule(new Rule("<BooleanOperator>"));
+        subRule4->AddRule(new Rule("<ArithExp>"));
+        subRule4->SetNature(SEQUENTIAL, OMITTED);
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        parentRule->AddRule(subRule4);
+        return parentRule;
+    }
+
+
+    Rule* BuildRule3() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("="));
+        rule->AddRule(new Rule("<>"));
+        rule->AddRule(new Rule(">"));
+        rule->AddRule(new Rule("<"));
+        rule->AddRule(new Rule(">="));
+        rule->AddRule(new Rule("<="));
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        parentRule->SetNature(OPTIONAL, NORMAL);
+        return parentRule;
+    }
+
+    Rule* BuildRule4() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("<NOT_ID_StartArithExp>"));
+        
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("<BooleanOperator>"));
+        subRule->AddRule(new Rule("<ArithExp>"));
+        subRule->SetNature(SEQUENTIAL, OMITTED);
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        parentRule->AddRule(subRule);
+        return parentRule;
+    }
+
+    Rule* BuildRule5() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("<NOT_ID_StartTerm>"));
+
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("+"));
+        subRule->AddRule(new Rule("<Term>"));
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(new Rule("-"));
+        subRule2->AddRule(new Rule("<Term>"));
+        rule->SetNature(OPTIONAL, REPEATABLE);
+        rule->AddRule(subRule);
+        rule->AddRule(subRule2);
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        return parentRule;
+    }
+
+    Rule* BuildRule6() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("<NOT_ID_StartFactor>"));
+
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("*"));
+        subRule->AddRule(new Rule("<Factor>"));
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(new Rule("/"));
+        subRule2->AddRule(new Rule("<Factor>"));
+        rule->SetNature(OPTIONAL, REPEATABLE);
+        rule->AddRule(subRule);
+        rule->AddRule(subRule2);
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        return parentRule;
+    }
+
+    Rule* BuildRule7() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("SIGN"));
+        rule->SetNature(SEQUENTIAL, OMITTED);
+
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("NUM"));
+        rule->AddRule(subRule);
+
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(new Rule("("));
+        subRule2->AddRule(new Rule("<ArithExp>"));
+        subRule2->AddRule(new Rule(")"));
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        parentRule->AddRule(subRule2);
+        parentRule->SetNature(OPTIONAL, NORMAL);
+        return parentRule;
+    }
+
+
+    Rule* BuildRule8() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("<Term>"));
+
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("+"));
+        subRule->AddRule(new Rule("<Term>"));
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(new Rule("-"));
+        subRule2->AddRule(new Rule("<Term>"));
+        rule->SetNature(OPTIONAL, REPEATABLE);
+        rule->AddRule(subRule);
+        rule->AddRule(subRule2);
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        return parentRule;
+    }
+
+    Rule* BuildRule9() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("<Factor>"));
+
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("*"));
+        subRule->AddRule(new Rule("<Factor>"));
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(new Rule("/"));
+        subRule2->AddRule(new Rule("<Factor>"));
+        rule->SetNature(OPTIONAL, REPEATABLE);
+        rule->AddRule(subRule);
+        rule->AddRule(subRule2);
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        return parentRule;
+    }
+
+    Rule* BuildRule10() {
+        Rule* rule = new Rule();
+        rule->AddRule(new Rule("IDENT"));
+        
+        Rule* subRule = new Rule();
+        subRule->AddRule(new Rule("SIGN"));
+        subRule->SetNature(SEQUENTIAL, OMITTED);
+
+        Rule* subRule2 = new Rule();
+        subRule2->AddRule(subRule);
+        subRule2->AddRule(new Rule("NUM"));
+        
+        Rule* subRule3 = new Rule();
+        subRule3->AddRule(new Rule("("));
+        subRule3->AddRule(new Rule("<ArithExp>"));
+        subRule3->AddRule(new Rule(")"));
+
+        Rule* parentRule = new Rule();
+        parentRule->AddRule(rule);
+        parentRule->AddRule(subRule2);
+        parentRule->AddRule(subRule3);
+        parentRule->SetNature(OPTIONAL, NORMAL);
+        return parentRule;
+    }
    public:
     GrammerChecker() {
-        vector<VS_vector> rule1;
-        BuildRule1(rule1);
+        BuildRule1();
+        BuildRule10();
     }
 };
 
@@ -230,11 +456,12 @@ class StatementAssembler {
 class Interpreter {
    public:
     Interpreter() {
-        StatementAssembler statementAssembler;
+        StatementAssembler mStatementAssembler;
+        GrammerChecker mGrammerChecker;
         vector<Token> statement;
         try {
             while (true) {
-                statementAssembler.GetNextStatement(statement);
+                mStatementAssembler.GetNextStatement(statement);
                 for (int i = 0; i < statement.size(); i++) {
                     cout << statement[i].mString << " ";
                 }
@@ -250,8 +477,8 @@ class Interpreter {
 };
 
 int main() {
-    ifstream in("file.txt");
-    cin.rdbuf(in.rdbuf());
+    ifstream input("file.txt", ios::in);
+    cin.rdbuf(input.rdbuf());
 
     Interpreter interpreter;
 }
