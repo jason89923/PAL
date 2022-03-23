@@ -89,7 +89,7 @@ class GrammerChecker {
 
     Rule* BuildRule2() {
         Rule* rule = new Rule();
-        //rule->AddRule(new Rule("[IDENT]"));
+        // rule->AddRule(new Rule("[IDENT]"));
         Rule* subRule = new Rule();
         subRule->AddRule(new Rule("+"));
         subRule->AddRule(new Rule("<Term>"));
@@ -119,7 +119,6 @@ class GrammerChecker {
         return parentRule;
     }
 
-
     Rule* BuildRule3() {
         Rule* rule = new Rule();
         rule->AddRule(new Rule("="));
@@ -138,7 +137,7 @@ class GrammerChecker {
     Rule* BuildRule4() {
         Rule* rule = new Rule();
         rule->AddRule(new Rule("<NOT_ID_StartArithExp>"));
-        
+
         Rule* subRule = new Rule();
         subRule->AddRule(new Rule("<BooleanOperator>"));
         subRule->AddRule(new Rule("<ArithExp>"));
@@ -209,7 +208,6 @@ class GrammerChecker {
         return parentRule;
     }
 
-
     Rule* BuildRule8() {
         Rule* rule = new Rule();
         rule->AddRule(new Rule("<Term>"));
@@ -251,7 +249,7 @@ class GrammerChecker {
     Rule* BuildRule10() {
         Rule* rule = new Rule();
         rule->AddRule(new Rule("IDENT"));
-        
+
         Rule* subRule = new Rule();
         subRule->AddRule(new Rule("SIGN"));
         subRule->SetNature(SEQUENTIAL, OMITTED);
@@ -259,7 +257,7 @@ class GrammerChecker {
         Rule* subRule2 = new Rule();
         subRule2->AddRule(subRule);
         subRule2->AddRule(new Rule("NUM"));
-        
+
         Rule* subRule3 = new Rule();
         subRule3->AddRule(new Rule("("));
         subRule3->AddRule(new Rule("<ArithExp>"));
@@ -272,6 +270,7 @@ class GrammerChecker {
         parentRule->SetNature(OPTIONAL, NORMAL);
         return parentRule;
     }
+
    public:
     GrammerChecker() {
         BuildRule1();
@@ -283,9 +282,50 @@ class TokenGetter {
    private:
     static map<string, int> sDelimiters;
     string mBufferedToken;
+    char mBufferedChar;
+    bool mFlag;
+
+    static bool IsDigit(const string& str) {
+        int numOfDecimalPoint = 0;
+        for (int i = 0; i < str.length(); i++) {
+            if (str[i] == '.') {
+                numOfDecimalPoint++;
+            }
+
+            if (((str[i] < '0' || str[i] > '9') && str[i] != '.') || numOfDecimalPoint > 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    static bool IsBoolean(const string& str) {
+        if (str == "true" || str == "false") {
+            return true;
+        }
+
+        return false;
+    }
+
+    static bool IsLeagleIdentifier(const string& str) {
+        if ((str[0] < 'a' || str[0] > 'z') && (str[0] < 'A' || str[0] > 'Z')) {
+            return false;
+        }
+
+        for (int i = 0; i < str.length(); i++) {
+            if ((str[i] < '0' || str[i] > '9') && (str[i] < 'a' || str[i] > 'z') && (str[i] < 'A' || str[i] > 'Z') && str[i] != '_') {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
    public:
     TokenGetter() {
+        mFlag = false;
+        mBufferedChar = '\0';
         string delimiters[] = {"+", "-", "*", "/", "=", ">", "<", "(", ")", ";", ":=", "<>", ">=", "<="};
         for (int i = 0; i < 14; i++) {
             sDelimiters[delimiters[i]] = i;
@@ -293,12 +333,16 @@ class TokenGetter {
     }
 
     void Flush() {
-        char currentChar = cin.get();
-        while (currentChar != '\n') {
-            if (currentChar == EOF) {
-                throw END_OF_FILE();
+        mBufferedToken.clear();
+        mBufferedChar = '\0';
+        if (!mFlag) {
+            char currentChar = cin.get();
+            while (currentChar != '\n') {
+                if (currentChar == EOF) {
+                    throw END_OF_FILE();
+                }
+                currentChar = cin.get();
             }
-            currentChar = cin.get();
         }
     }
 
@@ -312,13 +356,25 @@ class TokenGetter {
         char currentChar = '\0', nextChar = '\0';
         bool passingComment = false;
         while (token.length() == 0) {
-            currentChar = cin.get();
+            if (mBufferedChar != '\0') {
+                currentChar = mBufferedChar;
+                mBufferedChar = '\0';
+            } else {
+                currentChar = cin.get();
+            }
+
             nextChar = cin.peek();
             while (((currentChar != ' ' && currentChar != '\n' && currentChar != '\t') || passingComment) && currentChar != EOF) {
                 if (passingComment) {
                     if (currentChar == '\n')
                         passingComment = false;
                 } else {
+                    if (currentChar == '\n') {
+                        mFlag = true;
+                    } else {
+                        mFlag = false;
+                    }
+
                     if (currentChar == '/' && nextChar == '/')
                         passingComment = true;
                     else {
@@ -339,8 +395,18 @@ class TokenGetter {
                                 return token;
                             } else
                                 return currentString + nextString;
-                        } else
-                            token.push_back(currentChar);
+                        } else {
+                            if (IsDigit(token + currentString) || IsBoolean(token + currentString) || IsLeagleIdentifier(token + currentString)) {
+                                token.push_back(currentChar);
+                            } else {
+                                if (token.length() > 0) {
+                                    mBufferedChar = currentChar;
+                                    return token;
+                                } else {
+                                    return currentString;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -362,44 +428,6 @@ class TokenGetter {
 map<string, int> TokenGetter::sDelimiters;
 
 class Token {
-   private:
-    bool IsDigit(const string& str) {
-        int numOfDecimalPoint = 0;
-        for (int i = 0; i < str.length(); i++) {
-            if (str[i] == '.') {
-                numOfDecimalPoint++;
-            }
-
-            if (((str[i] < '0' || str[i] > '9') && str[i] != '.') || numOfDecimalPoint > 1) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    bool IsBoolean(const string& str) {
-        if (str == "true" || str == "false") {
-            return true;
-        }
-
-        return false;
-    }
-
-    bool IsLeagleIdentifier(const string& str) {
-        if ((str[0] < 'a' || str[0] > 'z') && (str[0] < 'A' || str[0] > 'Z')) {
-            return false;
-        }
-
-        for (int i = 0; i < str.length(); i++) {
-            if ((str[i] < 'a' || str[i] > 'z') && (str[i] < 'A' || str[i] > 'Z') && str[i] != '_') {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
    public:
     TokenType mType;
     string mString;
@@ -408,11 +436,11 @@ class Token {
         mString = str;
         if (TokenGetter::sDelimiters.find(mString) != TokenGetter::sDelimiters.end()) {
             mType = DELIMITER;
-        } else if (IsDigit(mString)) {
+        } else if (TokenGetter::IsDigit(mString)) {
             mType = DIGIT;
-        } else if (IsBoolean(mString)) {
+        } else if (TokenGetter::IsBoolean(mString)) {
             mType = BOOLEAN;
-        } else if (IsLeagleIdentifier(mString)) {
+        } else if (TokenGetter::IsLeagleIdentifier(mString)) {
             mType = IDENTIFIER;
         } else {
             stringstream msg;
