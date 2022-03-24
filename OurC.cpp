@@ -13,6 +13,9 @@ using namespace std;
 class END_OF_FILE {
 };
 
+class Partially_Correct {
+};
+
 class QUIT {
 };
 
@@ -21,261 +24,6 @@ enum TokenType {
     DELIMITER = 1,
     IDENTIFIER = 2,
     BOOLEAN = 3
-};
-
-enum RuleOperation {
-    SEQUENTIAL = 0,
-    OPTIONAL = 1
-};
-
-enum RuleNature {
-    NORMAL = 0,
-    REPEATABLE = 1,
-    OMITTED = 2
-};
-
-class Rule {
-   private:
-    vector<Rule*> mRule;
-    string basicRule;
-    RuleOperation mOperation;
-    RuleNature mRuleNature;
-
-   public:
-    Rule(string rule) {
-        basicRule = rule;
-        mOperation = SEQUENTIAL;
-        mRuleNature = NORMAL;
-    }
-
-    Rule() {
-        mOperation = SEQUENTIAL;
-        mRuleNature = NORMAL;
-    }
-
-    void AddRule(Rule* rule) {
-        mRule.push_back(rule);
-    }
-
-    void SetNature(RuleOperation operation, RuleNature ruleNature) {
-        mOperation = operation;
-        mRuleNature = ruleNature;
-    }
-};
-
-class GrammerChecker {
-   private:
-    Rule* BuildRule1() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("[IDENT]"));
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule(":="));
-        subRule->AddRule(new Rule("<ArithExp>"));
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(subRule);
-        subRule2->AddRule(new Rule("<IDlessArithExpOrBexp>"));
-        subRule2->SetNature(OPTIONAL, NORMAL);
-        rule->AddRule(subRule2);
-        rule->AddRule(new Rule(";"));
-        subRule2 = new Rule();
-        subRule2->AddRule(new Rule("<NOT_IDStartArithExpOrBexp>"));
-        subRule2->AddRule(new Rule(";"));
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        parentRule->AddRule(subRule2);
-        parentRule->SetNature(OPTIONAL, NORMAL);
-        return parentRule;
-    }
-
-    Rule* BuildRule2() {
-        Rule* rule = new Rule();
-        // rule->AddRule(new Rule("[IDENT]"));
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("+"));
-        subRule->AddRule(new Rule("<Term>"));
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(new Rule("-"));
-        subRule2->AddRule(new Rule("<Term>"));
-        Rule* subRule3 = new Rule();
-        subRule3->AddRule(new Rule("*"));
-        subRule3->AddRule(new Rule("<Factor>"));
-        Rule* subRule4 = new Rule();
-        subRule4->AddRule(new Rule("/"));
-        subRule4->AddRule(new Rule("<Factor>"));
-        rule->SetNature(OPTIONAL, REPEATABLE);
-        rule->AddRule(subRule);
-        rule->AddRule(subRule2);
-        rule->AddRule(subRule3);
-        rule->AddRule(subRule4);
-
-        subRule4 = new Rule();
-        subRule4->AddRule(new Rule("<BooleanOperator>"));
-        subRule4->AddRule(new Rule("<ArithExp>"));
-        subRule4->SetNature(SEQUENTIAL, OMITTED);
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        parentRule->AddRule(subRule4);
-        return parentRule;
-    }
-
-    Rule* BuildRule3() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("="));
-        rule->AddRule(new Rule("<>"));
-        rule->AddRule(new Rule(">"));
-        rule->AddRule(new Rule("<"));
-        rule->AddRule(new Rule(">="));
-        rule->AddRule(new Rule("<="));
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        parentRule->SetNature(OPTIONAL, NORMAL);
-        return parentRule;
-    }
-
-    Rule* BuildRule4() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("<NOT_ID_StartArithExp>"));
-
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("<BooleanOperator>"));
-        subRule->AddRule(new Rule("<ArithExp>"));
-        subRule->SetNature(SEQUENTIAL, OMITTED);
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        parentRule->AddRule(subRule);
-        return parentRule;
-    }
-
-    Rule* BuildRule5() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("<NOT_ID_StartTerm>"));
-
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("+"));
-        subRule->AddRule(new Rule("<Term>"));
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(new Rule("-"));
-        subRule2->AddRule(new Rule("<Term>"));
-        rule->SetNature(OPTIONAL, REPEATABLE);
-        rule->AddRule(subRule);
-        rule->AddRule(subRule2);
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        return parentRule;
-    }
-
-    Rule* BuildRule6() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("<NOT_ID_StartFactor>"));
-
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("*"));
-        subRule->AddRule(new Rule("<Factor>"));
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(new Rule("/"));
-        subRule2->AddRule(new Rule("<Factor>"));
-        rule->SetNature(OPTIONAL, REPEATABLE);
-        rule->AddRule(subRule);
-        rule->AddRule(subRule2);
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        return parentRule;
-    }
-
-    Rule* BuildRule7() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("SIGN"));
-        rule->SetNature(SEQUENTIAL, OMITTED);
-
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("NUM"));
-        rule->AddRule(subRule);
-
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(new Rule("("));
-        subRule2->AddRule(new Rule("<ArithExp>"));
-        subRule2->AddRule(new Rule(")"));
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        parentRule->AddRule(subRule2);
-        parentRule->SetNature(OPTIONAL, NORMAL);
-        return parentRule;
-    }
-
-    Rule* BuildRule8() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("<Term>"));
-
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("+"));
-        subRule->AddRule(new Rule("<Term>"));
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(new Rule("-"));
-        subRule2->AddRule(new Rule("<Term>"));
-        rule->SetNature(OPTIONAL, REPEATABLE);
-        rule->AddRule(subRule);
-        rule->AddRule(subRule2);
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        return parentRule;
-    }
-
-    Rule* BuildRule9() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("<Factor>"));
-
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("*"));
-        subRule->AddRule(new Rule("<Factor>"));
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(new Rule("/"));
-        subRule2->AddRule(new Rule("<Factor>"));
-        rule->SetNature(OPTIONAL, REPEATABLE);
-        rule->AddRule(subRule);
-        rule->AddRule(subRule2);
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        return parentRule;
-    }
-
-    Rule* BuildRule10() {
-        Rule* rule = new Rule();
-        rule->AddRule(new Rule("IDENT"));
-
-        Rule* subRule = new Rule();
-        subRule->AddRule(new Rule("SIGN"));
-        subRule->SetNature(SEQUENTIAL, OMITTED);
-
-        Rule* subRule2 = new Rule();
-        subRule2->AddRule(subRule);
-        subRule2->AddRule(new Rule("NUM"));
-
-        Rule* subRule3 = new Rule();
-        subRule3->AddRule(new Rule("("));
-        subRule3->AddRule(new Rule("<ArithExp>"));
-        subRule3->AddRule(new Rule(")"));
-
-        Rule* parentRule = new Rule();
-        parentRule->AddRule(rule);
-        parentRule->AddRule(subRule2);
-        parentRule->AddRule(subRule3);
-        parentRule->SetNature(OPTIONAL, NORMAL);
-        return parentRule;
-    }
-
-   public:
-    GrammerChecker() {
-        BuildRule1();
-        BuildRule10();
-    }
 };
 
 class TokenGetter {
@@ -481,6 +229,175 @@ class StatementAssembler {
     }
 };
 
+class GrammerChecker {
+   private:
+    map<string, string> mRuleMap;
+    map<char, char> mPair;
+
+    vector<string>* GetToken(const string& grammer) {
+        if (grammer.length() == 0) {
+            return NULL;
+        }
+
+        vector<string>* grammerQueue = new vector<string>();
+        string buffer;
+        int levelCounter = 0;
+        bool isGroup = false;
+        map<char, char>::iterator iter;
+        char previousChar = ' ';
+        for (int i = 0; i < grammer.length(); i++) {
+            if (!isGroup) {
+                if (previousChar != '\'') {
+                    iter = mPair.find(grammer[i]);
+                    if (iter != mPair.end()) {
+                        isGroup = true;
+                        levelCounter++;
+                    }
+                }
+            } else {
+                if (grammer[i] == iter->first) {
+                    levelCounter++;
+                } else if (grammer[i] == iter->second) {
+                    levelCounter--;
+                }
+
+                if (levelCounter == 0) {
+                    isGroup = false;
+                }
+            }
+
+            if (grammer[i] == ' ' && levelCounter == 0) {
+                if (buffer.length() > 0) {
+                    grammerQueue->push_back(buffer);
+                    buffer.clear();
+                }
+            } else {
+                buffer.push_back(grammer[i]);
+            }
+
+            previousChar = grammer[i];
+        }
+
+        if (buffer.length() > 0) {
+            grammerQueue->push_back(buffer);
+        }
+
+        return grammerQueue;
+    }
+
+    bool Compare(vector<Token>& instructionQueue, const string& grammer) {
+        if (grammer[0] == '{' || grammer[0] == '[' || grammer[0] == '(' || grammer[0] == '<') {
+            int previousSize = instructionQueue.size();
+            bool ifSuccess = Check(instructionQueue, grammer.substr(1, grammer.length() - 2));
+            if (grammer[0] == '(' || grammer[0] == '<') {
+                mErrorToken = instructionQueue[0].mString;
+                return ifSuccess;
+            } else if (grammer[0] == '[') {
+                mErrorToken = instructionQueue[0].mString;
+                int currentSize = instructionQueue.size();
+                return (ifSuccess || previousSize == currentSize);
+            } else {
+                while (ifSuccess) {
+                    previousSize = instructionQueue.size();
+                    ifSuccess = Check(instructionQueue, grammer.substr(1, grammer.length() - 2));
+                }
+
+                mErrorToken = instructionQueue[0].mString;
+                int currentSize = instructionQueue.size();
+                return previousSize == currentSize;
+            }
+        } else {
+            if (instructionQueue.size() == 0) {
+                throw Partially_Correct();
+            }
+
+            Token token = instructionQueue[0];
+            string literal = "'" + token.mString + "'";
+            if ((grammer == "IDENT" && token.mType == IDENTIFIER) || (grammer == "NUM" && token.mType == DIGIT) || (grammer == "SIGN" && (token.mString == "+" || token.mString == "-")) || (literal == grammer)) {
+                instructionQueue.erase(instructionQueue.begin());
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    bool Check(vector<Token>& instructionQueue, const string& grammer) {
+        map<string, string>::iterator iter = mRuleMap.find(grammer);
+        vector<string>* grammerQueue = NULL;
+        if (iter != mRuleMap.end()) {
+            grammerQueue = GetToken(iter->second);
+        } else {
+            grammerQueue = GetToken(grammer);
+        }
+
+        bool isORRelation = false;
+        for (int i = 0; i < grammerQueue->size(); i++) {
+            if (grammerQueue->at(i) == "|") {
+                grammerQueue->erase(grammerQueue->begin() + i);
+                isORRelation = true;
+                i--;
+            }
+        }
+
+        if (isORRelation) {
+            for (int i = 0; i < grammerQueue->size(); i++) {
+                int previousSize = instructionQueue.size();
+                bool isCorrect = Compare(instructionQueue, grammerQueue->at(i));
+                int currentSize = instructionQueue.size();
+                if (isCorrect) {
+                    return true;
+                } else {
+                    if (previousSize != currentSize) {
+                        return false;
+                    }
+                }
+            }
+
+            return false;
+        } else {
+            for (int i = 0; i < grammerQueue->size(); i++) {
+                if (!Compare(instructionQueue, grammerQueue->at(i))) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        delete grammerQueue;
+    }
+
+   public:
+    GrammerChecker() {
+        mRuleMap["Command"] = "( IDENT ( ( ':=' <ArithExp> ) | <IDlessArithExpOrBexp> ) ';') | ( <NOT_ID_StartArithExpOrBexp> ';' )";
+        mRuleMap["IDlessArithExpOrBexp"] = "{ ( '+' <Term> ) | ( '-' <Term> ) | ( '*' <Factor> ) | ( '/' <Factor> ) } [ <BooleanOperator> <ArithExp> ]";
+        mRuleMap["BooleanOperator"] = "'=' | '<>' | '>' | '<' | '>=' | '<='";
+        mRuleMap["NOT_ID_StartArithExpOrBexp"] = "<NOT_ID_StartArithExp> [ <BooleanOperator> <ArithExp> ]";
+        mRuleMap["NOT_ID_StartArithExp"] = "<NOT_ID_StartTerm> { ( '+' <Term> ) | ( '-' <Term> ) }";
+        mRuleMap["NOT_ID_StartTerm"] = "<NOT_ID_StartFactor> { ( '*' <Factor> ) | ( '/' <actor> ) }";
+        mRuleMap["NOT_ID_StartFactor"] = "( [ SIGN ] NUM ) | ( '(' <ArithExp> ')' )";
+        mRuleMap["ArithExp"] = "<Term> { ( '+' <Term> ) | ( '-' <Term> ) }";
+        mRuleMap["Term"] = "<Factor> { ( '*' <Factor> ) | ( '/' <Factor> ) }";
+        mRuleMap["Factor"] = "IDENT | ( [ SIGN ] NUM ) | ( '(' <ArithExp> ')' )";
+        mPair['{'] = '}';
+        mPair['['] = ']';
+        mPair['('] = ')';
+        mPair['<'] = '>';
+    }
+
+    bool Check(const vector<Token>& statement) {
+        vector<Token> instructionQueue = statement;
+        try {
+            return Check(instructionQueue, "Command");
+        } catch (const Partially_Correct& e) {
+            return true;
+        }
+    }
+
+    string mErrorToken;
+};
+
 class Interpreter {
    public:
     Interpreter() {
@@ -494,7 +411,10 @@ class Interpreter {
                     cout << statement[i].mString << " ";
                 }
 
-                cout << endl;
+                if (mGrammerChecker.Check(statement))
+                    cout << " : Correct" << endl;
+                else
+                    cout << " : Error at " << mGrammerChecker.mErrorToken << endl;
             }
         } catch (const END_OF_FILE& err) {
             cout << "reached end of file" << endl;
