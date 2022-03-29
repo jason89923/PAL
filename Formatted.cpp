@@ -559,11 +559,11 @@ class Calculator {
       return 1 ;
     else if ( token.mString == "<" || token.mString == ">" || token.mString == "<=" 
               || token.mString == ">=" || token.mString == "<>" || token.mString == "=" )
-      return 1 ;
-    else if ( token.mString == "+" || token.mString == "-" )
       return 2 ;
-    else if ( token.mString == "*" || token.mString == "/" )
+    else if ( token.mString == "+" || token.mString == "-" )
       return 3 ;
+    else if ( token.mString == "*" || token.mString == "/" )
+      return 4 ;
     else
       throw Uncalculable() ;
   } // Priority()
